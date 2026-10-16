@@ -1,11 +1,11 @@
 """
-CryoSAR - SAR-based analysis of Arctic sea ice.
+CryoSAR
 """
 
 import rasterio
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # Non-interactive backend (server-friendly)
+matplotlib.use("Agg") 
 import matplotlib.pyplot as plt
 from scipy.ndimage import uniform_filter
 
@@ -20,8 +20,6 @@ def load_sar(file_path, scale_factor=4):
     """
     with rasterio.open(file_path) as src:
         print(f"Original image: {src.width}x{src.height}, Bands: {src.count}")
-
-        # Downsample on read (memory efficient)
         new_height = src.height // scale_factor
         new_width = src.width // scale_factor
 
@@ -37,20 +35,14 @@ def load_sar(file_path, scale_factor=4):
 
 
 def to_db(band):
-    """Convert backscatter to dB."""
     return 10 * np.log10(band + 1e-10)
 
 
 def filter_speckle(band_db, size=3):
-    """Apply 3x3 mean filter to reduce speckle noise."""
     return uniform_filter(band_db, size=size)
 
 
 def classify_sea_ice(band_db):
-    """
-    Classify sea ice based on dB thresholds.
-    0 = open water, 1 = new ice, 2 = first-year ice, 3 = multi-year ice
-    """
     classification = np.zeros_like(band_db, dtype=np.uint8)
     classification[(band_db >= -30) & (band_db < -20)] = 0  # open water
     classification[(band_db >= -20) & (band_db < -12)] = 1  # new ice
@@ -86,13 +78,11 @@ def plot_results(raw, db, filtered, classification):
 
 
 if __name__ == "__main__":
-    # ⚠️ Aapki file SAFE folder ke andar hai — isliye poora path diya hai
     FILE_PATH = (
         "data/S1C_IW_GRDH_1SDV_20261016T005057_20261016T005122_009903_013BEF_EB5E_COG.SAFE"
         "/measurement/s1c-iw-grd-vh-20261016t005057-20261016t005122-009903-013bef-002-cog.tiff"
     )
 
-    # Agar memory error aaye to scale_factor barha dein (8, 16, etc.)
     SCALE_FACTOR = 8
 
     print("Loading SAR image...")
