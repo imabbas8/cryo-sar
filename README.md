@@ -25,3 +25,11 @@ git clone https://github.com/imabbas8/cryo-sar.git
 cd cryo-sar
 pip install -r requirements.txt
 ```
+
+## Output
+
+![CryoSAR Output](cryo_sar_output.png)
+
+_Four-panel visualization of Sentinel-1 SAR imagery over the Canadian Arctic:
+(a) raw backscatter, (b) dB-converted, (c) speckle-filtered, and
+(d) sea ice classification._

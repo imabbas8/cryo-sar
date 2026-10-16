@@ -1,18 +1,38 @@
 """
-CryoSAR SAR-based analysis of Arctic sea ice.
+CryoSAR - SAR-based analysis of Arctic sea ice.
 """
 
 import rasterio
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # Non-interactive backend (server-friendly)
 import matplotlib.pyplot as plt
 from scipy.ndimage import uniform_filter
 
 
-def load_sar(file_path):
-    """Load Sentinel-1 SAR image."""
+def load_sar(file_path, scale_factor=4):
+    """
+    Load Sentinel-1 SAR image with downsampling to save memory.
+
+    Args:
+        file_path: Path to SAR .tif file
+        scale_factor: Downsample factor (4 = 1/4 size, 8 = 1/8 size)
+    """
     with rasterio.open(file_path) as src:
-        print(f"Image: {src.width}x{src.height}, Bands: {src.count}")
-        band = src.read(1).astype(np.float32)
+        print(f"Original image: {src.width}x{src.height}, Bands: {src.count}")
+
+        # Downsample on read (memory efficient)
+        new_height = src.height // scale_factor
+        new_width = src.width // scale_factor
+
+        band = src.read(
+            1,
+            out_shape=(new_height, new_width),
+            resampling=rasterio.enums.Resampling.average,
+        ).astype(np.float32)
+
+        print(f"Downsampled to: {new_width}x{new_height}")
+
     return band
 
 
@@ -27,6 +47,10 @@ def filter_speckle(band_db, size=3):
 
 
 def classify_sea_ice(band_db):
+    """
+    Classify sea ice based on dB thresholds.
+    0 = open water, 1 = new ice, 2 = first-year ice, 3 = multi-year ice
+    """
     classification = np.zeros_like(band_db, dtype=np.uint8)
     classification[(band_db >= -30) & (band_db < -20)] = 0  # open water
     classification[(band_db >= -20) & (band_db < -12)] = 1  # new ice
@@ -58,20 +82,32 @@ def plot_results(raw, db, filtered, classification):
 
     plt.tight_layout()
     plt.savefig("cryo_sar_output.png", dpi=150, bbox_inches="tight")
-    plt.show()
     print("Saved: cryo_sar_output.png")
 
 
 if __name__ == "__main__":
-    FILE_PATH = "path/to/your/sentinel1.tif"
+    # ⚠️ Aapki file SAFE folder ke andar hai — isliye poora path diya hai
+    FILE_PATH = (
+        "data/S1C_IW_GRDH_1SDV_20261016T005057_20261016T005122_009903_013BEF_EB5E_COG.SAFE"
+        "/measurement/s1c-iw-grd-vh-20261016t005057-20261016t005122-009903-013bef-002-cog.tiff"
+    )
+
+    # Agar memory error aaye to scale_factor barha dein (8, 16, etc.)
+    SCALE_FACTOR = 8
+
     print("Loading SAR image...")
-    raw = load_sar(FILE_PATH)
+    raw = load_sar(FILE_PATH, scale_factor=SCALE_FACTOR)
+
     print("Converting to dB...")
     db = to_db(raw)
+
     print("Filtering speckle...")
     filtered = filter_speckle(db)
+
     print("Classifying sea ice...")
     classification = classify_sea_ice(filtered)
+
     print("Plotting results...")
     plot_results(raw, db, filtered, classification)
+
     print("Done!")
